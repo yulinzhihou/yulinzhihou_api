@@ -15,42 +15,44 @@ class JwtUtil
 {
     /**
      * 证书签发
+     * @param string $RSAKey
      * @param int $uid 用户id
      * @param string $role_key 角色组key
      * @param array $userInfo 用户登录信息
      * @return string
      */
-    public static function issue(int $uid,string $role_key,array $userInfo):string
+    public static function issue(int $uid,string $role_key,array $userInfo,string $RSAKey):string
     {
         $key = Env::get('app_key','test');         // 签名密钥
-        $time = time();    // 签发时间
         $token = [
-            'iss'   => '',   // 签发者
-            'aud'   => '',   // 接收方
-            'iat'   => $time, // 签发时间
-            'nbf'   => $time, // 签名生效时间
-            'exp'   => $time + 7200, // 签名有效时间（3600 * x）x小时
+            'iss'   => Env::get('jwt.iss','local'),   // 签发者
+            'aud'   => Env::get('jwt.aud','test'),   // 接收方
+            'iat'   => time(), // 签发时间
+            'nbf'   => time(), // 签名生效时间
+            'exp'   => time() + Env::get('jwt.exp',7200), // 签名有效时间（3600 * x）x小时
             'data' => [                 /*用户信息*/
                 'uid'       => $uid,     /*用户ID*/
                 'role'      => $role_key,/*用户角色组key*/
                 'user_info' => $userInfo /*用户登录信息*/
             ]
         ];
+
         // 根据token签发证书
-        return JWT::encode($token, $key);
+        return JWT::encode($token, Env::get('jwt.is_rsa',false) ? $RSAKey : $key,Env::get('jwt.is_rsa',false)  ? 'RS256' : 'HS256');
     }
 
     /**
      * 解析签名，按issue中的token格式返回
      * @param $key
      * @param $jwt
+     * @param string $alg
      * @return array
      */
-    public static function verification($key, $jwt):array
+    public static function verification($key, $jwt,string $alg = 'RS256'):array
     {
         try {
             JWT::$leeway = 60;  // 当前时间减去60， 时间回旋余地
-            $jwt = JWT::decode($jwt, $key, ['HS256']);  // 解析证书
+            $jwt = JWT::decode($jwt, $key, [$alg]);  // 解析证书
             return ['status'=>200,'message'=>'success','data'=>$jwt];
         } catch (SignatureInvalidException $e) {   // 签名不正确
             return ['status'=>504,'message'=>$e->getMessage(),'data'=>[]];

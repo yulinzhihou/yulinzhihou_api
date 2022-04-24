@@ -29,7 +29,9 @@ class checkSign
         $route = request()->pathinfo();
         if (!in_array($route, $whitelist)) { // 对登录控制器放行
             $token = request()->header('authorization');  // 前端请求携带的Token信息
-            $jwt = JwtUtil::verification(Env::get('app_key','test'), $token); // 与签发的key一致
+            $isRas = Env::get('jwt.is_rsa',false);
+            $key = $isRas ? root_path().Env::get('jwt.path').DIRECTORY_SEPARATOR.Env::get('jwt.name').'.key' : Env::get('jwt.app_key');
+            $jwt = JwtUtil::verification($key, $token,$isRas ? 'RS256' : 'HS256'); // 与签发的key一致
             if ($jwt['status'] == 200) {
                 $request->uid       = $jwt['data']->data->uid; // 传入登录用户ID
                 $request->role_key  = $jwt['data']->data->role; // 传入登录用户角色组key
