@@ -451,22 +451,20 @@ class Base extends BaseController
     {
         $file = $this->request->file('file');
         if (!$file) {
-            return $this->jsonR('没有上传文件');
+            return $this->jr('没有上传文件');
         }
 //        if ($this->commonValidate(__FUNCTION__,['file'=>$file])) {
-//            return json($this->message(true));
+//            return $this->message(true);
 //        }
         $filename = Filesystem::disk('public')->putFile('', $file, 'unique_id');
         $filePath = public_path().'storage/'  . $filename;
         if (!is_file($filePath)) {
-            $this->msg = '没找到数据';
-            return json($this->message());
+            return $this->jr('没找到数据');
         }
         //实例化reader
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
         if (!in_array($ext, ['csv', 'xls', 'xlsx'])) {
-            $this->msg = '文件格式不对';
-            return json($this->message());
+            return $this->jr('文件格式不对');
         }
         if ($ext === 'csv') {
             $file = fopen($filePath, 'r');
@@ -510,8 +508,7 @@ class Base extends BaseController
         $insert = [];
         try {
             if (!$PHPExcel = $reader->load($filePath)) {
-                $this->msg = '没找到数据';
-                return json($this->message());
+                return $this->jr('没找到数据');
             }
             $currentSheet = $PHPExcel->getSheet(0);  //读取文件中的第一个工作表
             $allColumn = $currentSheet->getHighestDataColumn(); //取得最大的列号
