@@ -47,38 +47,38 @@ class checkSign
                 return json($data);
             }
         } else {
-            // 无需要鉴权的接口请求，也需要标识哪个用户来源
-            $token = $request->param('token');  // 前端请求携带的Token信息
-            $uid = $request->param('uid');  // uid
-            // 排队登录接口
-            if ($route != 'v1/login/login') {
-                if ($token == '' || $uid == '') {
-                    $data = [
-                        'status'        => 504,
-                        'code'          => 0,
-                        'result'        => [],
-                        'message'       => '请仔细检查请求的接口参数，请求被拒绝。',
-                        'type'          => 'error'
-                    ];
-                    return json($data);
-                } else {
-                    $jwt = JwtUtil::verification(Env::get('app_key','test'), $token); // 与签发的key一致
-                    if ($jwt['status'] && $jwt['data']->data->uid == $uid) {
-                        $request->uid       = $jwt['data']->data->uid; // 传入登录用户ID
-                        $request->role_key  = $jwt['data']->data->role; // 传入登录用户角色组key
-                        $request->user_info = $jwt['data']->data->user_info;
-                    } else {
-                        $data = [
-                            'status'        => 504,
-                            'code'          => 0,
-                            'result'        => [],
-                            'message'       => 'token被恶意修改，请求被拒绝。',
-                            'type'          => 'error'
-                        ];
-                        return json($data);
-                    }
-                }
-            }
+//            // 无需要鉴权的接口请求，也需要标识哪个用户来源
+//            $token = $request->param('token');  // 前端请求携带的Token信息
+//            $uid = $request->param('uid');  // uid
+//            // 排除登录接口
+//            if ($route != 'v1/login/login') {
+//                if ($token == '' || $uid == '') {
+//                    $data = [
+//                        'status'        => 504,
+//                        'code'          => 0,
+//                        'result'        => [],
+//                        'message'       => '请仔细检查请求的接口参数，请求被拒绝。',
+//                        'type'          => 'error'
+//                    ];
+//                    return json($data);
+//                } else {
+//                    $jwt = JwtUtil::verification(Env::get('app_key','test'), $token); // 与签发的key一致
+//                    if ($jwt['status'] && $jwt['data']->data->uid == $uid) {
+//                        $request->uid       = $jwt['data']->data->uid; // 传入登录用户ID
+//                        $request->role_key  = $jwt['data']->data->role; // 传入登录用户角色组key
+//                        $request->user_info = $jwt['data']->data->user_info;
+//                    } else {
+//                        $data = [
+//                            'status'        => 504,
+//                            'code'          => 0,
+//                            'result'        => [],
+//                            'message'       => 'token被恶意修改，请求被拒绝。',
+//                            'type'          => 'error'
+//                        ];
+//                        return json($data);
+//                    }
+//                }
+//            }
         }
         return $next($request);
     }

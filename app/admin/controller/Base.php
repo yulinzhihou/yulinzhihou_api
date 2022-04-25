@@ -24,6 +24,7 @@ use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Env;
 use think\facade\Filesystem;
+use WebPConvert\WebPConvert;
 
 /**
  * 后台接口基类
@@ -374,70 +375,71 @@ class Base extends BaseController
         }
         $field = array_keys($files)[0];
         $data = [];
-        //七牛云验证
-//        $this->qn->validate($this->validate->rule[$field]);
-        //兼容多图上传
+        //多上传名称，单图上传  //不同字段文件名上传 image img icon
         if (is_array($files) && count($files) > 1 ) {
-            //不同字段文件名上传 image img ico
-            //上传到七牛
             foreach ($files as $key => $fileSimple) {
-//                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
-//                    return $this->jsonR($this->validate->getError());
-//                }
+                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
+                    return $this->jr($this->validate->getError());
+                }
                 //上传本地
-                $result = Filesystem::putFile(public_path().'uploads',$fileSimple);
-//                $result[$key] = $this->qn->uploadFile($key);
+                $filename = Filesystem::putFile(public_path().'uploads',$fileSimple);
+                $source = app()->getRootPath() . 'public/storage/'.$filename;
+                $destination = $source . '.webp';
+                $options = [];
+                WebPConvert::convert($source, $destination, $options);
+                $data[] = [
+                    'cdn'           => Env::get('QINIU.cdn'),
+                    'origin_name'   => $fileSimple->getOriginalName(),
+                    'filename'       => $filename,
+                    'md5'           => md5_file($files[$field]->getPathname()),
+                    'url'           => $this->request->domain(true).'/storage/'  . $filename,
+                    'relative_path' => 'storage/'  . $filename,
+                    'webp_path'     => 'storage/'  . $destination
+                ];
             }
-
-//            foreach ($result as $key => $item) {
-//                $data[] = [
-//                    'cdn' => Env::get('QINIU.cdn'),
-//                    'origin_name' => $files[$key]->getOriginalName(),
-//                    'filename' => explode('/', $item['filename'])[count(explode('/', $item['filename'])) - 1],
-//                    'md5'      => md5_file($files[$key]->getPathname()),
-//                    'url' => $item['remote_url'],
-//                    'relative_path' => $item['filename']
-//                ];
-//            }
+        // 单上传名称，多图上传 同一名称的数组文件上传.image[0] image[1]
         } elseif (is_array($files[$field]) && count($files[$field]) > 1) {
-            //同一名称的数组文件上传.image[0] image[1]
+
             foreach ($files as $key => $fileSimple) {
-//                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
-//                    return $this->jsonR($this->validate->getError());
-//                }
+                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
+                    return $this->jr($this->validate->getError());
+                }
                 //上传本地
                 $filename = Filesystem::disk('public')->putFile('', $fileSimple, 'unique_id');
+                $source = app()->getRootPath() . 'public/storage/'.$filename;
+                $destination = $source . '.webp';
+                $options = [];
+                WebPConvert::convert($source, $destination, $options);
+                $data[] = [
+                    'cdn'           => Env::get('QINIU.cdn'),
+                    'origin_name'   => $fileSimple->getOriginalName(),
+                    'filename'       => $filename,
+                    'md5'           => md5_file($files[$field]->getPathname()),
+                    'url'           => $this->request->domain(true).'/storage/'  . $filename,
+                    'relative_path' => 'storage/'  . $filename,
+                    'webp_path'     => 'storage/'  . $destination
+                ];
             }
-
-//            $result = Filesystem::putFile(public_path().'uploads',$fileSimple);
-            //上传到七牛
-//            $result = $this->qn->uploadFile($field, true, count($files[$field]));
-
-//            foreach ($result as $key => $item) {
-//                $data[] = [
-//                    'cdn' => Env::get('QINIU.cdn'),
-//                    'origin_name' => $files[$field][$key]->getOriginalName(),
-//                    'filename' => explode('/', $item['filename'])[count(explode('/', $item['filename'])) - 1],
-//                    'md5'   => md5_file($files[$field][$key]->getPathname()),
-//                    'url' => $item['remote_url'],
-//                    'relative_path' => $item['filename']
-//                ];
-//            }
+        // 单名称，单图上传
         } else {
-//            if ($this->commonValidate(__FUNCTION__,[$field => $files])) {
-//                return $this->jsonR($this->validate->getError());
-//            }
+            if ($this->commonValidate(__FUNCTION__,[$field => $files])) {
+                return $this->jr($this->validate->getError());
+            }
             //上传本地
             $filename = Filesystem::disk('public')->putFile('', $files[$field], 'unique_id');
+            $source = app()->getRootPath() . 'public/storage/'.$filename;
+            $destination = $source . '.webp';
+            $options = [];
+            WebPConvert::convert($source, $destination, $options);
             //上传到七牛
-//            $result = $this->qn->uploadFile($field);
             $data = [
                 'cdn'           => Env::get('QINIU.cdn'),
                 'origin_name'   => $files[$field]->getOriginalName(),
                 'filename'       => $filename,
                 'md5'           => md5_file($files[$field]->getPathname()),
                 'url'           => $this->request->domain(true).'/storage/'  . $filename,
-                'relative_path' => 'storage/'  . $filename
+                'relative_path' => 'storage/'  . $filename,
+                'webp_path'     => 'storage/'  . $destination
             ];
         }
 
@@ -590,7 +592,7 @@ class Base extends BaseController
      * @param int $count
      * @param string $fileName
      * @param array $options
-     * @return Response\Json
+     * @return \think\Response\Json
      */
     protected function excelExport(array $data = [], int $count = 10 ,string $fileName = '', array $options = []):\think\Response\Json
     {
