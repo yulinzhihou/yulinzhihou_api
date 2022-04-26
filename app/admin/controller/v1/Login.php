@@ -80,7 +80,7 @@ class Login extends Base
             if (empty($roleInfo)) {
                 return $this->jr('角色信息不正确');
             }
-            $RSAKey = Env::get('jwt.is_rsa') ? app_path().Env::get('jwt.path').DIRECTORY_SEPARATOR.Env::get('jwt.name').'.key' : Env::get('jwt.app_key');
+            $RSAKey = Env::get('jwt.is_rsa') ? app_path().Env::get('jwt.cert_path').DIRECTORY_SEPARATOR.Env::get('jwt.name').'.key' : Env::get('jwt.app_key');
             $jwt = JwtUtil::issue($userInfo['id'], $roleInfo['value'],$userInfo,$RSAKey);  // 调用jwt工具类中issue()方法，传入用户ID，模拟传入角色组关键词
             Cache::set('user_token_'.$userInfo['id'],$jwt,3600);
             $data = [

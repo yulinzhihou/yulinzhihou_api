@@ -224,7 +224,7 @@ class Base extends BaseController
      */
     public function message(bool $validate = false): \think\Response\Json
     {
-        $this->sysMsg[1] = $this->sysMsg[1]  ?? 'invalid';
+        $this->sysMsg[0] = $this->sysMsg[0]  ?? 'invalid';
         $this->sysMsg[$this->code] = $this->sysMsg[$this->code] ?? 'validate invalid';
 
         $data = [
@@ -257,7 +257,7 @@ class Base extends BaseController
         } else {
             $this->msg = 'error invalid';
         }
-        $this->code     = $result ? 0 : 1;
+        $this->code     = $result ? 1 : 0;
         $this->status   = $result ? 200 : 504;
         $this->returnData = !is_array($result) ? [] : $result;
         return $this->message($validate);
@@ -365,7 +365,7 @@ class Base extends BaseController
     }
 
     /**
-     * 图片，ICON上传
+     * 通用上传类
      */
     public function upload():\think\Response\Json
     {
@@ -373,76 +373,61 @@ class Base extends BaseController
         if (!$files) {
             return $this->jr("请选择上传的文件");
         }
-        $field = array_keys($files)[0];
-        $data = [];
-        //多上传名称，单图上传  //不同字段文件名上传 image img icon
-        if (is_array($files) && count($files) > 1 ) {
-            foreach ($files as $key => $fileSimple) {
-                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
-                    return $this->jr($this->validate->getError());
-                }
-                //上传本地
-                $filename = Filesystem::putFile(public_path().'uploads',$fileSimple);
-                $source = app()->getRootPath() . 'public/storage/'.$filename;
-                $destination = $source . '.webp';
-                $options = [];
-                WebPConvert::convert($source, $destination, $options);
-                $data[] = [
-                    'cdn'           => Env::get('QINIU.cdn'),
-                    'origin_name'   => $fileSimple->getOriginalName(),
-                    'filename'       => $filename,
-                    'md5'           => md5_file($files[$field]->getPathname()),
-                    'url'           => $this->request->domain(true).'/storage/'  . $filename,
-                    'relative_path' => 'storage/'  . $filename,
-                    'webp_path'     => 'storage/'  . $destination
-                ];
-            }
-        // 单上传名称，多图上传 同一名称的数组文件上传.image[0] image[1]
-        } elseif (is_array($files[$field]) && count($files[$field]) > 1) {
+        $data = $localFile = [];
 
-            foreach ($files as $key => $fileSimple) {
-                if ($this->commonValidate(__FUNCTION__, [$key => $fileSimple])) {
+        foreach ($files as $key => $file) {
+            if (is_array($file)) {
+                // 单上传名称，多图上传 同一名称的数组文件上传.image[0] image[1]
+                foreach ($file as $key1 => $file1) {
+                    if ($this->commonValidate(__FUNCTION__, [$key => $file1])) {
+                        return $this->jr($this->validate->getError());
+                    }
+                    //上传本地
+                    $tempFile = Filesystem::disk('public')->putFile('',$file1,'unique_id');
+                    $localFile[$key1] = [
+                        'file'       => $tempFile,
+                        'real_name' => $file1->getOriginalName(),
+                        'md5'       => md5_file($file1->getPathname())
+                    ];
+                }
+            } else {
+                //多上传名称，单图上传  //不同字段文件名上传 image img icon
+                // 单名称，单图上传
+                if ($this->commonValidate(__FUNCTION__, [$key => $file])) {
                     return $this->jr($this->validate->getError());
                 }
                 //上传本地
-                $filename = Filesystem::disk('public')->putFile('', $fileSimple, 'unique_id');
-                $source = app()->getRootPath() . 'public/storage/'.$filename;
-                $destination = $source . '.webp';
-                $options = [];
-                WebPConvert::convert($source, $destination, $options);
-                $data[] = [
-                    'cdn'           => Env::get('QINIU.cdn'),
-                    'origin_name'   => $fileSimple->getOriginalName(),
-                    'filename'       => $filename,
-                    'md5'           => md5_file($files[$field]->getPathname()),
-                    'url'           => $this->request->domain(true).'/storage/'  . $filename,
-                    'relative_path' => 'storage/'  . $filename,
-                    'webp_path'     => 'storage/'  . $destination
+                $tempFile = Filesystem::disk('public')->putFile('',$file,'unique_id');
+                $localFile[$key] = [
+                    'file'       => $tempFile,
+                    'real_name' => $file->getOriginalName(),
+                    'md5'       => md5_file($file->getPathname())
                 ];
             }
-        // 单名称，单图上传
-        } else {
-            if ($this->commonValidate(__FUNCTION__,[$field => $files])) {
-                return $this->jr($this->validate->getError());
-            }
-            //上传本地
-            $filename = Filesystem::disk('public')->putFile('', $files[$field], 'unique_id');
-            $source = app()->getRootPath() . 'public/storage/'.$filename;
-            $destination = $source . '.webp';
-            $options = [];
-            WebPConvert::convert($source, $destination, $options);
-            //上传到七牛
-            $data = [
-                'cdn'           => Env::get('QINIU.cdn'),
-                'origin_name'   => $files[$field]->getOriginalName(),
-                'filename'       => $filename,
-                'md5'           => md5_file($files[$field]->getPathname()),
-                'url'           => $this->request->domain(true).'/storage/'  . $filename,
-                'relative_path' => 'storage/'  . $filename,
-                'webp_path'     => 'storage/'  . $destination
-            ];
         }
-
+        // 上传云存储或者本地数据组装
+        if (!empty($localFile)) {
+            foreach ($localFile as $filename) {
+                $localPath = Env::get('upload.local_path','storage').DIRECTORY_SEPARATOR.$filename['file'];
+                $source = public_path() . $localPath;
+                $destination = $source . '.webp';
+                $options = [];
+                WebPConvert::convert($source, $destination, $options);
+                $data[] = [
+                    'cdn'       => Env::get('upload.cdn'),
+                    'origin'    => $filename['real_name'],
+                    'file'       => $filename['file'],
+                    'md5'       => $filename['md5'],
+                    'url'       => Env::get('upload.cdn').$localPath,
+                    'r_path'    => $localPath,
+                    'w_path'    => $localPath.'.webp'
+                ];
+                // 表示是否要本地存储，如果不需要，则删除本地
+                if (!Env::get('upload.is_local_exists',true)) {
+                    @unlink($source);
+                }
+            }
+        }
         return $this->jr('上传成功',$data);
     }
 
