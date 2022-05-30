@@ -440,9 +440,9 @@ class Base extends BaseController
         if (!$file) {
             return $this->jr('没有上传文件');
         }
-//        if ($this->commonValidate(__FUNCTION__,['file'=>$file])) {
-//            return $this->message(true);
-//        }
+        if ($this->commonValidate(__FUNCTION__,['file'=>$file])) {
+            return $this->message(true);
+        }
         $filename = Filesystem::disk('public')->putFile('', $file, 'unique_id');
         $filePath = public_path().'storage/'  . $filename;
         if (!is_file($filePath)) {
