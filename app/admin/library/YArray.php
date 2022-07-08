@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+
 namespace  app\admin\library;
 
 /**
@@ -48,6 +49,20 @@ trait YArray
     public function getKeyByValue(array $data,string $value):string
     {
         return '';
+    }
+
+    /**
+     * 根据二维数据某个字段进行二维数组的排序
+     *
+     * @param array $data  需要进行字段排序的二维数组
+     * @param string $field 二维数组排序字段名
+     * @param int $sort    排序规则，SORT_DESC=倒序，SORT_AES=升序
+     * @return array       返回排序后的数组
+     */
+    public function sortArrayByFieldValue(array $data, string $field, int $sort = SORT_DESC) : array
+    {
+        array_multisort(array_column($data,$field),$sort,$data);
+        return $data;
     }
 
 }
