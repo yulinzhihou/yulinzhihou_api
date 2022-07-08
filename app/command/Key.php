@@ -16,8 +16,8 @@ class Key extends Command
     protected function configure()
     {
         // 指令配置
-        $this->setName('key')
-            ->setDescription('Generate A New RSA Private and Public key')
+        $this->setName('key:generate')
+            ->setDescription('Generate a New RSA Private and Public key')
             ->addOption('force', '-f', Option::VALUE_NONE, '--force, -f : Force To Generate A New RSA Private and Public key ');
     }
 
@@ -33,8 +33,12 @@ class Key extends Command
         $keyPair = KeyPair::generateKeyPair(4096);
         $secretKey = $keyPair->getPrivateKey()->getKey();
         $publicKey = $keyPair->getPublicKey()->getKey();
-        $seKey = root_path().'extend'.DIRECTORY_SEPARATOR.Env::get('jwt_rsa.name','yulinzhihou').'.key';
-        $pubKey = root_path().'extend'.DIRECTORY_SEPARATOR.Env::get('jwt_rsa.name','yulinzhihou').'.pem';
+        $path = root_path().DIRECTORY_SEPARATOR.'certs';
+        if (is_dir($path)) {
+            @mkdir($path,0777,true);
+        }
+        $seKey = $path.DIRECTORY_SEPARATOR.Env::get('jwt_rsa.name','yulinzhihou').'.key';
+        $pubKey = $path.DIRECTORY_SEPARATOR.Env::get('jwt_rsa.name','yulinzhihou').'.pem';
         if ($input->hasOption('force')) {
             if (!is_dir(dirname($seKey))) {
                 @mkdir(dirname($seKey),0777,true);
@@ -51,6 +55,6 @@ class Key extends Command
             }
         }
 
-        $output->writeln("Key Generate Success!");
+        $output->writeln("Key Generate Success! Path: ".root_path().'extend'.DIRECTORY_SEPARATOR);
     }
 }

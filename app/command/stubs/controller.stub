@@ -1,0 +1,22 @@
+<?php
+declare (strict_types = 1);
+
+namespace {%namespace%};
+
+use {%baseNamespace%}\Controller\Base;
+use {%modelNamespace%}\{%className%} as {%className%}Model;
+use {%validateNamespace%}\{%className%} as {%className%}Validate;
+
+/**
+ * {%className%}
+ */
+class {%className%} extends Base
+{
+    public function initialize()
+    {
+        parent::initialize();
+        $this->model = new {%className%}Model();
+        $this->validate = new {%className%}Validate();
+    }
+
+}
